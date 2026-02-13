@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 from pathlib import Path
 
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,12 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&dzi#zsb(hz6p(s#anunt&#-a%ohr2hld71*i72*^exvw-yq$y'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-&dzi#zsb(hz6p(s#anunt&#-a%ohr2hld71*i72*^exvw-yq$y")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
-ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -61,7 +61,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'mynotes/build'
+            BASE_DIR.parent / 'frontend/build'
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -140,7 +140,9 @@ STATIC_URL = 'static/'
 #     BASE_DIR / 'mynotes/build/static'
 # ]
 
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'mynotes/build/static')]
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR.parent, 'frontend/build/static')
+]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
