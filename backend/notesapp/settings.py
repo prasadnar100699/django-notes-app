@@ -57,12 +57,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'notesapp.urls'
 
+FRONTEND_BUILD = os.path.join(BASE_DIR.parent, 'frontend/build')
+TEMPLATE_DIRS = [FRONTEND_BUILD] if os.path.exists(FRONTEND_BUILD) else []
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            BASE_DIR.parent / 'frontend/build'
-        ],
+        'DIRS': TEMPLATE_DIRS,
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -136,13 +137,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# STATICFILES_DIRS = [
-#     BASE_DIR / 'mynotes/build/static'
-# ]
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR.parent, 'frontend/build/static')
-]
+STATICFILES_DIRS = []
+FRONTEND_STATIC = os.path.join(BASE_DIR.parent, 'frontend/build/static')
+if os.path.exists(FRONTEND_STATIC):
+    STATICFILES_DIRS.append(FRONTEND_STATIC)
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
