@@ -11,6 +11,7 @@ env:
   ECS_CLUSTER: caring-eagle-voubdg
   ECS_SERVICE: devops-prac-service-x0jhmhnc
   TASK_DEFINITION: devops-prac
+  CONTAINER_NAME: backend
 
 jobs:
   deploy:
@@ -45,24 +46,29 @@ jobs:
             --task-definition ${{ env.TASK_DEFINITION }} \
             --query taskDefinition > task-definition.json
 
+      # 🔥 FUTURE-PROOF CLEAN METHOD
       - name: Clean task definition
         run: |
-          jq 'del(
-            .taskDefinitionArn,
-            .revision,
-            .status,
-            .requiresAttributes,
-            .compatibilities,
-            .registeredAt,
-            .registeredBy
-          )' task-definition.json > clean-task-def.json
+          jq '{
+            family,
+            taskRoleArn,
+            executionRoleArn,
+            networkMode,
+            containerDefinitions,
+            volumes,
+            placementConstraints,
+            requiresCompatibilities,
+            cpu,
+            memory,
+            runtimePlatform
+          }' task-definition.json > clean-task-def.json
 
       - name: Render new task definition with updated image and secrets
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: clean-task-def.json
-          container-name: backend
+          container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
           environment-variables: |
             DB_NAME=${{ secrets.DB_NAME }}
