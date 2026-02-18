@@ -1,4 +1,4 @@
-name: Deploy Backend to ECS
+name: Deploy Full Stack (Backend + Frontend)
 
 on:
   push:
@@ -7,20 +7,32 @@ on:
 
 env:
   AWS_REGION: ap-south-1
+
+  # Backend
   ECR_REPOSITORY: django-notes-backend
   ECS_CLUSTER: caring-eagle-voubdg
   ECS_SERVICE: devops-prac-service-x0jhmhnc
   TASK_DEFINITION: devops-prac
   CONTAINER_NAME: backend
 
+  # Frontend
+  S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # ==========================
+      # Checkout
+      # ==========================
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # ==========================
+      # Configure AWS
+      # ==========================
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -28,11 +40,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ==========================
+      # -------- BACKEND ---------
+      # ==========================
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image
+      - name: Build, tag, and push backend image
         id: build-image
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
@@ -46,7 +62,6 @@ jobs:
             --task-definition ${{ env.TASK_DEFINITION }} \
             --query taskDefinition > task-definition.json
 
-      # 🔥 FUTURE-PROOF CLEAN METHOD
       - name: Clean task definition
         run: |
           jq '{
@@ -63,7 +78,7 @@ jobs:
             runtimePlatform
           }' task-definition.json > clean-task-def.json
 
-      - name: Render new task definition with updated image and secrets
+      - name: Render new task definition
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
@@ -77,10 +92,37 @@ jobs:
             DB_PORT=${{ secrets.DB_PORT }}
             DB_HOST=${{ secrets.DB_HOST }}
 
-      - name: Deploy to ECS
+      - name: Deploy backend to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.render-task.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+      # ==========================
+      # -------- FRONTEND --------
+      # ==========================
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync frontend/build s3://${{ env.S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
