@@ -57,13 +57,19 @@ jobs:
             .registeredBy
           )' task-definition.json > clean-task-def.json
 
-      - name: Render new task definition with updated image
+      - name: Render new task definition with updated image and secrets
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: clean-task-def.json
           container-name: backend
           image: ${{ steps.build-image.outputs.image }}
+          environment-variables: |
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_HOST=${{ secrets.DB_HOST }}
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
