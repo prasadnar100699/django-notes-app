@@ -28,6 +28,7 @@ until nc -z $DB_HOST 3306; do \
   echo 'Waiting for MySQL...'; \
   sleep 3; \
 done && \
+echo 'Creating database if not exists...' && \
+python create_db.py && \
 python manage.py migrate && \
-python manage.py collectstatic --noinput && \
 gunicorn notesapp.wsgi:application --bind 0.0.0.0:8000 --workers 3"
